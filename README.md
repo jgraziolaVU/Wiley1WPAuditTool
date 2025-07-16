@@ -66,31 +66,6 @@ This tool is your **digital command center** - think NASA mission control, but f
 - cPanel hosting account with Softaculous
 - A sense of adventure and a cup of coffee ☕
 
-### **Quick Start (The Express Lane!)**
-
-1. **Clone this digital masterpiece:**
-   ```bash
-   git clone https://github.com/your-username/wordpress-management-tool.git
-   cd wordpress-management-tool
-   ```
-
-2. **Install the magic ingredients:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Launch your WordPress command center:**
-   ```bash
-   streamlit run app.py
-   ```
-
-4. **Open your browser and navigate to:**
-   ```
-   http://localhost:8501
-   ```
-
-5. **Enter your cPanel credentials and watch the magic happen!** ✨
-
 ---
 
 ## 🎯 How to Use This Beast
