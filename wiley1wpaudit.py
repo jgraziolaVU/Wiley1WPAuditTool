@@ -321,53 +321,32 @@ else:
     if 'plugins' not in st.session_state:
         st.session_state.plugins = []
 
-    # Step 1: Discover WordPress Installations
-    st.header("📋 Step 1: Discover WordPress Installations")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("🔍 Scan for WordPress Sites"):
-            with st.spinner("Scanning via Softaculous API..."):
-                installations, error = list_wordpress_installations()
-                if error:
-                    st.error(f"Error: {error}")
-                else:
-                    st.session_state.installations = installations
-                    st.success(f"Found {len(installations)} WordPress installations")
-
-    with col2:
-        if st.button("🔄 Refresh Installation List"):
-            st.session_state.installations = []
-            st.session_state.selected_installation = None
-            st.success("Installation list cleared. Click scan to reload.")
-
-    # Display found installations
-    if st.session_state.installations:
-        st.subheader("WordPress Installations Found:")
-        for i, install in enumerate(st.session_state.installations):
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col1:
-                st.write(f"**{install['display_name']}** (v{install['version']}) - User: {install['user']}")
-            with col2:
-                st.write(f"ID: {install['insid']}")
-            with col3:
-                if st.button(f"Select", key=f"select_{i}"):
-                    st.session_state.selected_installation = install
-                    st.rerun()
-
-    st.markdown("---")
-
-    # Step 2: Plugin Management
-    if st.session_state.selected_installation:
-        install = st.session_state.selected_installation
-        st.header(f"🔌 Step 2: Plugin Management for {install['display_name']}")
+    # Step 1: Individual Domain Management
+    st.header("🔌 Step 1: Individual Domain Management")
+    st.markdown("Select a specific domain to manage plugins and perform individual actions.")
+    
+    # Domain selector
+    domain_options = [f"{domain['display_name']} (v{domain['version']})" for domain in selected_domains]
+    
+    selected_domain_index = st.selectbox(
+        "Choose a domain to manage:",
+        range(len(selected_domains)),
+        format_func=lambda x: domain_options[x]
+    )
+    
+    if selected_domain_index is not None:
+        current_domain = selected_domains[selected_domain_index]
+        st.session_state.selected_installation = current_domain
         
+        st.info(f"🌐 Managing: **{current_domain['display_name']}** (User: {current_domain['user']})")
+        
+        # Plugin management for selected domain
         col1, col2 = st.columns(2)
         
         with col1:
             if st.button("📊 Load Plugin Status"):
                 with st.spinner("Loading plugins via Softaculous API..."):
-                    plugins, error = get_plugins_for_installation(install['insid'])
+                    plugins, error = get_plugins_for_installation(current_domain['insid'])
                     if error:
                         st.error(f"Error: {error}")
                     else:
@@ -375,9 +354,9 @@ else:
                         st.success(f"Loaded {len(plugins)} plugins")
         
         with col2:
-            if st.button("🔄 Update All Plugins"):
+            if st.button("🔄 Update All Plugins for This Domain"):
                 with st.spinner("Updating all plugins..."):
-                    result, error = update_plugin(install['insid'])
+                    result, error = update_plugin(current_domain['insid'])
                     if error:
                         st.error(f"Update failed: {error}")
                     else:
@@ -422,14 +401,14 @@ else:
                     with col2:
                         if plugin.get('active', False):
                             if st.button(f"Deactivate", key=f"deact_{plugin['slug']}"):
-                                result, error = deactivate_plugin(install['insid'], plugin['slug'])
+                                result, error = deactivate_plugin(current_domain['insid'], plugin['slug'])
                                 if error:
                                     st.error(f"Deactivation failed: {error}")
                                 else:
                                     st.success("Plugin deactivated!")
                         else:
                             if st.button(f"Activate", key=f"act_{plugin['slug']}"):
-                                result, error = activate_plugin(install['insid'], plugin['slug'])
+                                result, error = activate_plugin(current_domain['insid'], plugin['slug'])
                                 if error:
                                     st.error(f"Activation failed: {error}")
                                 else:
@@ -438,7 +417,7 @@ else:
                     with col3:
                         if plugin.get('update_available', False):
                             if st.button(f"Update", key=f"update_{plugin['slug']}"):
-                                result, error = update_plugin(install['insid'], plugin['slug'])
+                                result, error = update_plugin(current_domain['insid'], plugin['slug'])
                                 if error:
                                     st.error(f"Update failed: {error}")
                                 else:
@@ -446,20 +425,15 @@ else:
                     
                     if plugin.get('description'):
                         st.write(f"**Description:** {plugin['description']}")
-
-    st.markdown("---")
-
-    # Step 3: WordPress Core Management
-    if st.session_state.selected_installation:
-        install = st.session_state.selected_installation
-        st.header(f"⚙️ Step 3: WordPress Core Management for {install['display_name']}")
         
+        # WordPress Core Management for selected domain
+        st.subheader("⚙️ WordPress Core Management")
         col1, col2 = st.columns(2)
         
         with col1:
             if st.button("🔄 Upgrade WordPress Core"):
                 with st.spinner("Upgrading WordPress core..."):
-                    result, error = upgrade_wordpress_installation(install['insid'])
+                    result, error = upgrade_wordpress_installation(current_domain['insid'])
                     if error:
                         st.error(f"Upgrade failed: {error}")
                     else:
@@ -468,69 +442,193 @@ else:
                             st.json(result)
         
         with col2:
-            st.info(f"Current Version: {install['version']}")
-
-    st.markdown("---")
-
-    # Step 4: Backup Management
-    st.header("💾 Step 4: Backup Management")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if st.button("📋 List All Backups"):
-            with st.spinner("Loading backups..."):
-                backups, error = list_backups()
-                if error:
-                    st.error(f"Error: {error}")
-                else:
-                    st.success("Backups loaded!")
-                    if backups:
-                        st.json(backups)
-
-    with col2:
-        if st.session_state.selected_installation:
+            st.info(f"Current Version: {current_domain['version']}")
+        
+        # Backup Management for selected domain
+        st.subheader("💾 Backup Management")
+        col1, col2 = st.columns(2)
+        
+        with col1:
             if st.button("💾 Create Backup"):
                 with st.spinner("Creating backup..."):
-                    result, error = create_backup(st.session_state.selected_installation['insid'])
+                    result, error = create_backup(current_domain['insid'])
                     if error:
                         st.error(f"Backup failed: {error}")
                     else:
                         st.success("Backup created successfully!")
                         if result:
                             st.json(result)
-
-    with col3:
-        backup_filename = st.text_input("Backup filename to delete:")
-        if st.button("🗑️ Delete Backup"):
-            if backup_filename:
-                result, error = delete_backup(backup_filename)
-                if error:
-                    st.error(f"Delete failed: {error}")
-                else:
-                    st.success("Backup deleted!")
+        
+        with col2:
+            if st.button("📋 List All Backups"):
+                with st.spinner("Loading backups..."):
+                    backups, error = list_backups()
+                    if error:
+                        st.error(f"Error: {error}")
+                    else:
+                        st.success("Backups loaded!")
+                        if backups:
+                            st.json(backups)
 
     st.markdown("---")
 
-    # Step 5: Upload to artscistore
-    st.header("☁️ Step 5: Upload to artscistore")
-    if 'sftp_credentials' in st.session_state:
-        if st.button("📤 Upload Latest Backup"):
-            backups = sorted(LOCAL_BACKUP_DIR.glob("*.zip"), key=os.path.getmtime, reverse=True)
-            if backups:
-                latest_backup = backups[0]
-                with st.spinner("Uploading to artscistore..."):
-                    if upload_to_artscistore(str(latest_backup), latest_backup.name):
-                        st.success(f"✅ Uploaded {latest_backup.name} to artscistore")
-                    else:
-                        st.error("❌ Upload failed")
+    # Step 2: Bulk Operations
+    st.header("🚀 Step 2: Bulk Operations for Selected Domains")
+    st.markdown("Perform actions across all selected domains at once.")
+    
+    # Bulk audit configuration
+    audit_options = st.multiselect(
+        "Select audit steps to perform across all selected domains:",
+        ["Update all plugins", "Upgrade WordPress core", "Create backups", "Upload to artscistore"],
+        default=["Update all plugins", "Create backups"]
+    )
+    
+    # Bulk operation buttons
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🏃‍♂️ Run Bulk Audit on Selected Domains", type="primary"):
+            if not audit_options:
+                st.warning("Please select at least one audit step")
             else:
-                st.warning("No backup files found")
+                run_bulk_audit(selected_domains, audit_options)
+    
+    with col2:
+        if st.button("🔄 Update All Plugins (All Selected Domains)"):
+            run_bulk_plugin_update(selected_domains)
+
+def run_bulk_audit(domains, audit_options):
+    """Run bulk audit on selected domains"""
+    total_sites = len(domains)
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    results = {
+        'success': [],
+        'errors': []
+    }
+    
+    for i, domain in enumerate(domains):
+        status_text.text(f"Processing {domain['display_name']} ({i+1}/{total_sites})")
+        
+        # Update plugins
+        if "Update all plugins" in audit_options:
+            st.write(f"🔄 Updating plugins for {domain['display_name']}...")
+            result, error = update_plugin(domain['insid'])
+            if error:
+                st.error(f"Plugin update failed for {domain['display_name']}: {error}")
+                results['errors'].append(f"Plugin update failed for {domain['display_name']}: {error}")
+            else:
+                st.success(f"✅ Plugins updated for {domain['display_name']}")
+                results['success'].append(f"Plugins updated for {domain['display_name']}")
+        
+        # Upgrade WordPress core
+        if "Upgrade WordPress core" in audit_options:
+            st.write(f"⚙️ Upgrading WordPress core for {domain['display_name']}...")
+            result, error = upgrade_wordpress_installation(domain['insid'])
+            if error:
+                st.error(f"Core upgrade failed for {domain['display_name']}: {error}")
+                results['errors'].append(f"Core upgrade failed for {domain['display_name']}: {error}")
+            else:
+                st.success(f"✅ WordPress core upgraded for {domain['display_name']}")
+                results['success'].append(f"WordPress core upgraded for {domain['display_name']}")
+        
+        # Create backups
+        if "Create backups" in audit_options:
+            st.write(f"💾 Creating backup for {domain['display_name']}...")
+            result, error = create_backup(domain['insid'])
+            if error:
+                st.error(f"Backup failed for {domain['display_name']}: {error}")
+                results['errors'].append(f"Backup failed for {domain['display_name']}: {error}")
+            else:
+                st.success(f"✅ Backup created for {domain['display_name']}")
+                results['success'].append(f"Backup created for {domain['display_name']}")
+        
+        progress_bar.progress((i + 1) / total_sites)
+    
+    # Upload to artscistore
+    if "Upload to artscistore" in audit_options and 'sftp_credentials' in st.session_state:
+        st.write("📤 Uploading all backups to artscistore...")
+        backups = sorted(LOCAL_BACKUP_DIR.glob("*.zip"), key=os.path.getmtime, reverse=True)
+        upload_count = 0
+        for backup in backups:
+            if upload_to_artscistore(str(backup), backup.name):
+                upload_count += 1
+        st.success(f"✅ Uploaded {upload_count} backup files to artscistore")
+        results['success'].append(f"Uploaded {upload_count} backup files to artscistore")
+    
+    # Show final results
+    status_text.text("Bulk audit complete!")
+    
+    with st.expander("📊 Bulk Audit Results Summary"):
+        st.write(f"**✅ Successful Operations:** {len(results['success'])}")
+        for success in results['success']:
+            st.write(f"• {success}")
+        
+        if results['errors']:
+            st.write(f"**❌ Failed Operations:** {len(results['errors'])}")
+            for error in results['errors']:
+                st.write(f"• {error}")
+    
+    st.success("🎉 Bulk audit process completed!")
+
+def run_bulk_plugin_update(domains):
+    """Run plugin updates on all selected domains"""
+    total_sites = len(domains)
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    success_count = 0
+    error_count = 0
+    
+    for i, domain in enumerate(domains):
+        status_text.text(f"Updating plugins for {domain['display_name']} ({i+1}/{total_sites})")
+        
+        result, error = update_plugin(domain['insid'])
+        if error:
+            st.error(f"❌ Plugin update failed for {domain['display_name']}: {error}")
+            error_count += 1
+        else:
+            st.success(f"✅ Plugins updated for {domain['display_name']}")
+            success_count += 1
+        
+        progress_bar.progress((i + 1) / total_sites)
+    
+    status_text.text("Plugin updates complete!")
+    st.success(f"🎉 Plugin updates completed! ✅ {success_count} successful, ❌ {error_count} failed")
+
+    # Step 3: Upload Management
+    st.header("☁️ Step 3: Upload to artscistore")
+    if 'sftp_credentials' in st.session_state:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("📤 Upload Latest Backup"):
+                backups = sorted(LOCAL_BACKUP_DIR.glob("*.zip"), key=os.path.getmtime, reverse=True)
+                if backups:
+                    latest_backup = backups[0]
+                    with st.spinner("Uploading to artscistore..."):
+                        if upload_to_artscistore(str(latest_backup), latest_backup.name):
+                            st.success(f"✅ Uploaded {latest_backup.name} to artscistore")
+                        else:
+                            st.error("❌ Upload failed")
+                else:
+                    st.warning("No backup files found")
+        
+        with col2:
+            backup_filename = st.text_input("Backup filename to delete:")
+            if st.button("🗑️ Delete Backup"):
+                if backup_filename:
+                    result, error = delete_backup(backup_filename)
+                    if error:
+                        st.error(f"Delete failed: {error}")
+                    else:
+                        st.success("Backup deleted!")
     else:
         st.warning("⚠️ SFTP credentials not configured. Please logout and reconfigure.")
 
     # Display local backup files
-    st.subheader("Local Backup Files")
+    st.subheader("📁 Local Backup Files")
     backups = list(LOCAL_BACKUP_DIR.glob("*.zip"))
     if backups:
         for backup in sorted(backups, key=os.path.getmtime, reverse=True):
@@ -539,70 +637,6 @@ else:
             st.write(f"📁 {backup.name} ({file_size:.1f} MB) - {mod_time.strftime('%Y-%m-%d %H:%M')}")
     else:
         st.info("No local backup files found")
-
-    st.markdown("---")
-
-    # Step 6: Complete Automated Audit
-    st.header("🚀 Step 6: Complete Automated Audit")
-
-    audit_options = st.multiselect(
-        "Select audit steps to perform:",
-        ["Update all plugins", "Upgrade WordPress core", "Create backups", "Upload to artscistore"],
-        default=["Update all plugins", "Create backups", "Upload to artscistore"]
-    )
-
-    if st.button("🏃‍♂️ Run Complete Audit for All Sites"):
-        if not st.session_state.installations:
-            st.error("Please scan for WordPress installations first")
-        else:
-            total_sites = len(st.session_state.installations)
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            for i, install in enumerate(st.session_state.installations):
-                status_text.text(f"Processing {install['display_name']} ({i+1}/{total_sites})")
-                
-                # Update plugins
-                if "Update all plugins" in audit_options:
-                    st.write(f"🔄 Updating plugins for {install['display_name']}...")
-                    result, error = update_plugin(install['insid'])
-                    if error:
-                        st.error(f"Plugin update failed for {install['display_name']}: {error}")
-                    else:
-                        st.success(f"✅ Plugins updated for {install['display_name']}")
-                
-                # Upgrade WordPress core
-                if "Upgrade WordPress core" in audit_options:
-                    st.write(f"⚙️ Upgrading WordPress core for {install['display_name']}...")
-                    result, error = upgrade_wordpress_installation(install['insid'])
-                    if error:
-                        st.error(f"Core upgrade failed for {install['display_name']}: {error}")
-                    else:
-                        st.success(f"✅ WordPress core upgraded for {install['display_name']}")
-                
-                # Create backups
-                if "Create backups" in audit_options:
-                    st.write(f"💾 Creating backup for {install['display_name']}...")
-                    result, error = create_backup(install['insid'])
-                    if error:
-                        st.error(f"Backup failed for {install['display_name']}: {error}")
-                    else:
-                        st.success(f"✅ Backup created for {install['display_name']}")
-                
-                progress_bar.progress((i + 1) / total_sites)
-            
-            # Upload to artscistore
-            if "Upload to artscistore" in audit_options and 'sftp_credentials' in st.session_state:
-                st.write("📤 Uploading all backups to artscistore...")
-                backups = sorted(LOCAL_BACKUP_DIR.glob("*.zip"), key=os.path.getmtime, reverse=True)
-                upload_count = 0
-                for backup in backups:
-                    if upload_to_artscistore(str(backup), backup.name):
-                        upload_count += 1
-                st.success(f"✅ Uploaded {upload_count} backup files to artscistore")
-            
-            status_text.text("Audit complete!")
-            st.success("🎉 Complete audit process finished successfully!")
 
     st.markdown("---")
     st.caption("Developed for CLAS IT AI in July Workshop – 2025")
