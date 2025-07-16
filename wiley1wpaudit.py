@@ -9,6 +9,8 @@ import zipfile
 import tarfile
 import tempfile
 import shutil
+import csv
+import io
 
 # --- Configuration ---
 LOCAL_BACKUP_DIR = Path("./backups")
@@ -234,7 +236,59 @@ def get_backup_file_info(backup_filename):
     except Exception:
         return None
 
-def create_compressed_archive(backup_files, archive_name, compression_type='zip'):
+def export_sites_to_csv(installations):
+    """Export WordPress installations to CSV format"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'Installation ID', 'Domain', 'Display Name', 'Path', 
+        'WordPress Version', 'User', 'Full URL'
+    ])
+    
+    # Write data rows
+    for installation in installations:
+        writer.writerow([
+            installation.get('insid', ''),
+            installation.get('domain', ''),
+            installation.get('display_name', ''),
+            installation.get('path', ''),
+            installation.get('version', ''),
+            installation.get('user', ''),
+            f"https://{installation.get('domain', '')}{installation.get('path', '')}"
+        ])
+    
+    return output.getvalue()
+
+def export_sites_to_json(installations):
+    """Export WordPress installations to JSON format"""
+    export_data = {
+        'export_timestamp': datetime.datetime.now().isoformat(),
+        'total_installations': len(installations),
+        'installations': installations
+    }
+    return json.dumps(export_data, indent=2)
+
+def create_detailed_site_report(installations):
+    """Create a detailed markdown report of all installations"""
+    report = []
+    report.append("# WordPress Installations Report")
+    report.append(f"**Generated:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report.append(f"**Total Sites:** {len(installations)}")
+    report.append("")
+    
+    for i, installation in enumerate(installations, 1):
+        report.append(f"## {i}. {installation.get('display_name', 'Unknown')}")
+        report.append(f"- **Installation ID:** {installation.get('insid', 'N/A')}")
+        report.append(f"- **Domain:** {installation.get('domain', 'N/A')}")
+        report.append(f"- **Path:** {installation.get('path', 'N/A')}")
+        report.append(f"- **WordPress Version:** {installation.get('version', 'N/A')}")
+        report.append(f"- **User:** {installation.get('user', 'N/A')}")
+        report.append(f"- **Full URL:** https://{installation.get('domain', '')}{installation.get('path', '')}")
+        report.append("")
+    
+    return "\n".join(report)
     """Create a compressed archive from multiple backup files"""
     try:
         archive_path = DOWNLOADS_DIR / f"{archive_name}.{compression_type}"
@@ -568,6 +622,51 @@ else:
     st.header("🌐 Select WordPress Installations")
     
     if st.session_state.installations:
+        # Export options before domain selection
+        st.subheader("📊 Export Site Information")
+        st.markdown("Export your WordPress installations data for record-keeping or analysis.")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            # CSV Export
+            csv_data = export_sites_to_csv(st.session_state.installations)
+            st.download_button(
+                label="📊 Export CSV",
+                data=csv_data,
+                file_name=f"wordpress_sites_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                help="Download site list as CSV file"
+            )
+        
+        with col2:
+            # JSON Export
+            json_data = export_sites_to_json(st.session_state.installations)
+            st.download_button(
+                label="📋 Export JSON",
+                data=json_data,
+                file_name=f"wordpress_sites_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                help="Download site list as JSON file"
+            )
+        
+        with col3:
+            # Markdown Report
+            report_data = create_detailed_site_report(st.session_state.installations)
+            st.download_button(
+                label="📝 Export Report",
+                data=report_data,
+                file_name=f"wordpress_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                mime="text/markdown",
+                help="Download detailed markdown report"
+            )
+        
+        with col4:
+            # Display count
+            st.metric("Total Sites", len(st.session_state.installations))
+        
+        st.markdown("---")
+        
         # Create a multiselect for domain selection
         domain_options = [f"{domain['display_name']} (v{domain['version']})" for domain in st.session_state.installations]
         selected_indices = st.multiselect(
