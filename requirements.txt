@@ -5,8 +5,9 @@ requests>=2.31.0
 # PHP Data Handling (for Softaculous API responses)
 phpserialize>=1.3
 
-# File and Archive Handling
-pathlib2>=2.3.7  # Enhanced path handling (included in Python 3.4+)
+# Security (recommended for production)
+urllib3>=1.26.0  # For secure HTTPS requests
+certifi>=2023.7.22  # SSL certificate validation
 
 # Standard Library Modules (no installation required, but listed for reference)
 # os - Operating system interface
@@ -17,6 +18,9 @@ pathlib2>=2.3.7  # Enhanced path handling (included in Python 3.4+)
 # tarfile - TAR archive handling
 # tempfile - Temporary file and directory creation
 # shutil - High-level file operations
+# csv - CSV file reading and writing
+# io - Core tools for working with streams
+# pathlib - Object-oriented filesystem paths
 
 # Optional but Recommended for Production
 # python-dotenv>=1.0.0  # For environment variable management
@@ -26,10 +30,6 @@ pathlib2>=2.3.7  # Enhanced path handling (included in Python 3.4+)
 # pytest>=7.4.0  # For testing
 # black>=23.0.0  # Code formatting
 # flake8>=6.0.0  # Code linting
-
-# Security (recommended for production)
-urllib3>=1.26.0  # For secure HTTPS requests
-certifi>=2023.7.22  # SSL certificate validation
 
 # Performance (optional but recommended)
 # streamlit-option-menu>=0.3.6  # Enhanced UI components
