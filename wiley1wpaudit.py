@@ -574,7 +574,7 @@ else:
             "Select domains to manage:",
             range(len(st.session_state.installations)),
             format_func=lambda x: domain_options[x],
-            default=list(range(len(st.session_state.installations)))
+            default=[]  # No domains selected by default for safety
         )
         
         selected_domains = [st.session_state.installations[i] for i in selected_indices]
