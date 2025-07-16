@@ -342,205 +342,207 @@ def show_main_app():
 # --- Streamlit UI ---
 st.set_page_config(page_title="CLAS IT WordPress Audit", layout="wide")
 
+# Always show the title and instructions at the top
+st.title("🔧 CLAS IT WordPress Audit & Plugin Management Tool")
+st.markdown("### Enhanced with Advanced Download Options")
+
+# Instructions Section - Always visible at the top
+with st.expander("📖 Instructions - How to Master This WordPress Wizard! 🧙‍♂️", expanded=False):
+    st.markdown("""
+    # 🎉 Welcome to the Ultimate WordPress Management Experience!
+    
+    Ready to become a WordPress management superhero? This tool is your cape! 🦸‍♂️ Let's dive into the magical world of bulk WordPress management where tedious tasks become one-click wonders.
+    
+    ## 🚀 What Does This Beast Do?
+    
+    Think of this as your **WordPress Command Center** - like having a mission control for all your WordPress sites! Instead of logging into each site individually (ugh, the horror! 😱), you can:
+    
+    - 🔌 **Manage plugins** across dozens of sites simultaneously
+    - 🔄 **Update everything** with the power of a thousand clicks (but actually just one!)
+    - 💾 **Create and download backups** like a digital hoarder (but organized!)
+    - ⚙️ **Upgrade WordPress cores** faster than you can say "security patch"
+    - 📦 **Compress and archive** your backups like a professional data wizard
+    
+    ---
+    
+    ## 🎯 Step-by-Step Adventure Guide
+    
+    ### 🔐 **Phase 1: The Authentication Ritual**
+    
+    **What you need:**
+    - Your cPanel credentials (username, password, host, port)
+    - A cup of coffee ☕ (optional but recommended)
+    - Your superhero cape (definitely optional)
+    
+    **The Magic:**
+    1. Enter your cPanel details in the login form below
+    2. Click "🚀 Connect & Start Audit Tool"
+    3. Watch as the tool tests your connection (fingers crossed! 🤞)
+    4. Success = You're now in the WordPress Matrix! 🕶️
+    
+    ---
+    
+    ### 🌐 **Phase 2: The Great Site Selection**
+    
+    **What happens:**
+    - The tool automatically discovers ALL your WordPress installations
+    - You see a beautiful list of domains (like a digital portfolio!)
+    - Multi-select checkboxes let you choose your destiny
+    
+    **Pro Tips:**
+    - 📋 **Select All** is your friend for bulk operations
+    - 🎯 **Select Specific** sites for targeted management
+    - 👀 **Domain info** shows versions and users at a glance
+    
+    ---
+    
+    ### 🔌 **Phase 3: Individual Domain Mastery**
+    
+    **Your Single-Site Superpowers:**
+    
+    #### 📊 **Plugin Detective Mode**
+    - Click "📊 Load Plugin Status" to see EVERY plugin
+    - Filter by Active 🟢, Inactive 🔴, or Updates Available ⚠️
+    - Each plugin gets its own card with:
+      - ✅ **Activate/Deactivate** buttons
+      - 🔄 **Update** button (when available)
+      - 📝 **Description** and version info
+    
+    #### ⚙️ **WordPress Core Command Center**
+    - See current version at a glance
+    - One-click WordPress core upgrades
+    - Perfect for staying security-current!
+    
+    #### 💾 **Backup Mission Control**
+    - Create instant backups
+    - List all existing backups
+    - Download individual backup files
+    
+    ---
+    
+    ### 🚀 **Phase 4: Bulk Operations - The Nuclear Option**
+    
+    **When you need to manage ALL THE THINGS:**
+    
+    #### 🏃‍♂️ **The Bulk Audit Blitz**
+    Choose your adventure:
+    - ✅ **Update all plugins** (across ALL selected sites!)
+    - 🔄 **Upgrade WordPress core** (mass modernization!)
+    - 💾 **Create backups** (safety first, friends!)
+    
+    **What you'll see:**
+    - 📊 **Progress bars** showing real-time status
+    - ✅ **Success counters** for that dopamine hit
+    - ❌ **Error reporting** (because things happen)
+    - 🎉 **Victory celebrations** when complete!
+    
+    ---
+    
+    ### 💾 **Phase 5: Backup Download Nirvana**
+    
+    **This is where the magic REALLY happens! ✨**
+    
+    #### 📋 **Server Backup Management**
+    - **📥 Download Selected**: Cherry-pick your favorites
+    - **📥 Download All**: Grab everything (digital hoarding mode!)
+    - **📦 Download as Archive**: ZIP or TAR.GZ compression wizardry
+    - **🗑️ Delete Selected**: Clean up server space
+    
+    #### 📁 **Local Backup Mastery**
+    Once downloaded, your backups live in `./backups/` and you can:
+    - 📦 **Create ZIP Archives** from selected files
+    - 📦 **Create TAR.GZ Archives** for maximum compression
+    - ⬇️ **Individual Downloads** with dedicated buttons
+    - 🗑️ **Bulk Delete** for spring cleaning
+    
+    #### 📦 **Archive Collection**
+    Created archives live in `./downloads/` with:
+    - 📅 **Timestamp naming** (no more "backup_final_FINAL_v2.zip")
+    - 📊 **File size information** (know what you're downloading!)
+    - ⬇️ **One-click downloads** for everything
+    
+    ---
+    
+    ## 🎯 Pro Tips for WordPress Ninjas
+    
+    ### 🔥 **Efficiency Hacks**
+    - **Start with backups** - Always create backups before major updates
+    - **Use filters** - Plugin filters save time when hunting specific issues
+    - **Bulk operations** - Perfect for monthly maintenance routines
+    - **Archive everything** - Compressed backups save massive storage space
+    
+    ### 🛡️ **Safety First**
+    - **Test on staging** - Try updates on non-production sites first
+    - **Download backups** - Always have local copies before major changes
+    - **Check plugin compatibility** - Some plugins don't play nice with others
+    - **Monitor results** - Watch the success/error counters during bulk operations
+    
+    ### 🚀 **Advanced Workflows**
+    
+    **The "Monthly Maintenance Marathon":**
+    1. Select all sites → Create backups → Download as archive
+    2. Update all plugins across all sites
+    3. Upgrade WordPress cores
+    4. Create new backups post-update
+    5. Victory dance! 💃
+    
+    **The "Emergency Response Protocol":**
+    1. Select problem site → Create immediate backup
+    2. Download backup locally
+    3. Deactivate problematic plugins
+    4. Test functionality
+    5. Reactivate or find alternatives
+    
+    ---
+    
+    ## 🎉 **Fun Features You'll Love**
+    
+    - **🎨 Color-coded status** - Green for good, red for needs attention
+    - **📊 Progress bars** - Watch your bulk operations in real-time
+    - **🎯 Smart filtering** - Find exactly what you need
+    - **📱 Responsive design** - Works on mobile (because who doesn't manage WordPress on their phone?)
+    - **🔐 Session management** - Your credentials stay secure in session state
+    - **📦 Compression options** - ZIP for compatibility, TAR.GZ for space savings
+    
+    ---
+    
+    ## 🆘 **When Things Go Sideways**
+    
+    **Common Issues & Solutions:**
+    - **Connection failed?** Check your cPanel credentials and server status
+    - **Plugin update failed?** Some plugins require manual intervention
+    - **Backup download slow?** Large sites = large backups (patience, young padawan)
+    - **Archive creation failed?** Check available disk space
+    
+    **Remember:** This tool uses the **Softaculous API** - it's as reliable as your hosting provider's implementation!
+    
+    ---
+    
+    ## 🎊 **Ready to Begin?**
+    
+    You're now equipped with the knowledge to manage WordPress sites like a absolute legend! 🏆
+    
+    **Quick Start Checklist:**
+    - ✅ Have your cPanel credentials ready
+    - ✅ Know which sites you want to manage
+    - ✅ Decide on backup strategy
+    - ✅ Choose your compression preference
+    - ✅ Put on your superhero cape (optional)
+    
+    **Now go forth and manage those WordPress sites like the digital superhero you are!** 🚀
+    
+    ---
+    
+    *💡 Pro Tip: Bookmark this page and use it as your WordPress management command center. Your future self will thank you!*
+    """)
+
+st.markdown("---")
+
 # Check if user is authenticated
 if 'credentials' not in st.session_state:
     show_login_screen()
 else:
     show_main_app()
-    st.title("🔧 CLAS IT WordPress Audit & Plugin Management Tool")
-    st.markdown("### Enhanced with Advanced Download Options")
-    
-    # Instructions Section
-    with st.expander("📖 Instructions - How to Master This WordPress Wizard! 🧙‍♂️", expanded=False):
-        st.markdown("""
-        # 🎉 Welcome to the Ultimate WordPress Management Experience!
-        
-        Ready to become a WordPress management superhero? This tool is your cape! 🦸‍♂️ Let's dive into the magical world of bulk WordPress management where tedious tasks become one-click wonders.
-        
-        ## 🚀 What Does This Beast Do?
-        
-        Think of this as your **WordPress Command Center** - like having a mission control for all your WordPress sites! Instead of logging into each site individually (ugh, the horror! 😱), you can:
-        
-        - 🔌 **Manage plugins** across dozens of sites simultaneously
-        - 🔄 **Update everything** with the power of a thousand clicks (but actually just one!)
-        - 💾 **Create and download backups** like a digital hoarder (but organized!)
-        - ⚙️ **Upgrade WordPress cores** faster than you can say "security patch"
-        - 📦 **Compress and archive** your backups like a professional data wizard
-        
-        ---
-        
-        ## 🎯 Step-by-Step Adventure Guide
-        
-        ### 🔐 **Phase 1: The Authentication Ritual**
-        
-        **What you need:**
-        - Your cPanel credentials (username, password, host, port)
-        - A cup of coffee ☕ (optional but recommended)
-        - Your superhero cape (definitely optional)
-        
-        **The Magic:**
-        1. Enter your cPanel details in the login form
-        2. Click "🚀 Connect & Start Audit Tool"
-        3. Watch as the tool tests your connection (fingers crossed! 🤞)
-        4. Success = You're now in the WordPress Matrix! 🕶️
-        
-        ---
-        
-        ### 🌐 **Phase 2: The Great Site Selection**
-        
-        **What happens:**
-        - The tool automatically discovers ALL your WordPress installations
-        - You see a beautiful list of domains (like a digital portfolio!)
-        - Multi-select checkboxes let you choose your destiny
-        
-        **Pro Tips:**
-        - 📋 **Select All** is your friend for bulk operations
-        - 🎯 **Select Specific** sites for targeted management
-        - 👀 **Domain info** shows versions and users at a glance
-        
-        ---
-        
-        ### 🔌 **Phase 3: Individual Domain Mastery**
-        
-        **Your Single-Site Superpowers:**
-        
-        #### 📊 **Plugin Detective Mode**
-        - Click "📊 Load Plugin Status" to see EVERY plugin
-        - Filter by Active 🟢, Inactive 🔴, or Updates Available ⚠️
-        - Each plugin gets its own card with:
-          - ✅ **Activate/Deactivate** buttons
-          - 🔄 **Update** button (when available)
-          - 📝 **Description** and version info
-        
-        #### ⚙️ **WordPress Core Command Center**
-        - See current version at a glance
-        - One-click WordPress core upgrades
-        - Perfect for staying security-current!
-        
-        #### 💾 **Backup Mission Control**
-        - Create instant backups
-        - List all existing backups
-        - Download individual backup files
-        
-        ---
-        
-        ### 🚀 **Phase 4: Bulk Operations - The Nuclear Option**
-        
-        **When you need to manage ALL THE THINGS:**
-        
-        #### 🏃‍♂️ **The Bulk Audit Blitz**
-        Choose your adventure:
-        - ✅ **Update all plugins** (across ALL selected sites!)
-        - 🔄 **Upgrade WordPress core** (mass modernization!)
-        - 💾 **Create backups** (safety first, friends!)
-        
-        **What you'll see:**
-        - 📊 **Progress bars** showing real-time status
-        - ✅ **Success counters** for that dopamine hit
-        - ❌ **Error reporting** (because things happen)
-        - 🎉 **Victory celebrations** when complete!
-        
-        ---
-        
-        ### 💾 **Phase 5: Backup Download Nirvana**
-        
-        **This is where the magic REALLY happens! ✨**
-        
-        #### 📋 **Server Backup Management**
-        - **📥 Download Selected**: Cherry-pick your favorites
-        - **📥 Download All**: Grab everything (digital hoarding mode!)
-        - **📦 Download as Archive**: ZIP or TAR.GZ compression wizardry
-        - **🗑️ Delete Selected**: Clean up server space
-        
-        #### 📁 **Local Backup Mastery**
-        Once downloaded, your backups live in `./backups/` and you can:
-        - 📦 **Create ZIP Archives** from selected files
-        - 📦 **Create TAR.GZ Archives** for maximum compression
-        - ⬇️ **Individual Downloads** with dedicated buttons
-        - 🗑️ **Bulk Delete** for spring cleaning
-        
-        #### 📦 **Archive Collection**
-        Created archives live in `./downloads/` with:
-        - 📅 **Timestamp naming** (no more "backup_final_FINAL_v2.zip")
-        - 📊 **File size information** (know what you're downloading!)
-        - ⬇️ **One-click downloads** for everything
-        
-        ---
-        
-        ## 🎯 Pro Tips for WordPress Ninjas
-        
-        ### 🔥 **Efficiency Hacks**
-        - **Start with backups** - Always create backups before major updates
-        - **Use filters** - Plugin filters save time when hunting specific issues
-        - **Bulk operations** - Perfect for monthly maintenance routines
-        - **Archive everything** - Compressed backups save massive storage space
-        
-        ### 🛡️ **Safety First**
-        - **Test on staging** - Try updates on non-production sites first
-        - **Download backups** - Always have local copies before major changes
-        - **Check plugin compatibility** - Some plugins don't play nice with others
-        - **Monitor results** - Watch the success/error counters during bulk operations
-        
-        ### 🚀 **Advanced Workflows**
-        
-        **The "Monthly Maintenance Marathon":**
-        1. Select all sites → Create backups → Download as archive
-        2. Update all plugins across all sites
-        3. Upgrade WordPress cores
-        4. Create new backups post-update
-        5. Victory dance! 💃
-        
-        **The "Emergency Response Protocol":**
-        1. Select problem site → Create immediate backup
-        2. Download backup locally
-        3. Deactivate problematic plugins
-        4. Test functionality
-        5. Reactivate or find alternatives
-        
-        ---
-        
-        ## 🎉 **Fun Features You'll Love**
-        
-        - **🎨 Color-coded status** - Green for good, red for needs attention
-        - **📊 Progress bars** - Watch your bulk operations in real-time
-        - **🎯 Smart filtering** - Find exactly what you need
-        - **📱 Responsive design** - Works on mobile (because who doesn't manage WordPress on their phone?)
-        - **🔐 Session management** - Your credentials stay secure in session state
-        - **📦 Compression options** - ZIP for compatibility, TAR.GZ for space savings
-        
-        ---
-        
-        ## 🆘 **When Things Go Sideways**
-        
-        **Common Issues & Solutions:**
-        - **Connection failed?** Check your cPanel credentials and server status
-        - **Plugin update failed?** Some plugins require manual intervention
-        - **Backup download slow?** Large sites = large backups (patience, young padawan)
-        - **Archive creation failed?** Check available disk space
-        
-        **Remember:** This tool uses the **Softaculous API** - it's as reliable as your hosting provider's implementation!
-        
-        ---
-        
-        ## 🎊 **Ready to Begin?**
-        
-        You're now equipped with the knowledge to manage WordPress sites like a absolute legend! 🏆
-        
-        **Quick Start Checklist:**
-        - ✅ Have your cPanel credentials ready
-        - ✅ Know which sites you want to manage
-        - ✅ Decide on backup strategy
-        - ✅ Choose your compression preference
-        - ✅ Put on your superhero cape (optional)
-        
-        **Now go forth and manage those WordPress sites like the digital superhero you are!** 🚀
-        
-        ---
-        
-        *💡 Pro Tip: Bookmark this page and use it as your WordPress management command center. Your future self will thank you!*
-        """)
-    
-    st.markdown("---")
 
     # Initialize session state
     if 'installations' not in st.session_state:
