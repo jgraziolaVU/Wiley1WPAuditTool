@@ -6,8 +6,6 @@
 
 [![Made with Streamlit](https://img.shields.io/badge/Made%20with-Streamlit-FF6B6B.svg)](https://streamlit.io/)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/your-username/wordpress-management-tool/graphs/commit-activity)
 
 ---
 
