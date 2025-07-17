@@ -11,20 +11,218 @@ import tempfile
 import shutil
 import csv
 import io
+import logging
+import socket
+import hashlib
+import threading
 
 # --- Configuration ---
 LOCAL_BACKUP_DIR = Path("./backups")
 DOWNLOADS_DIR = Path("./downloads")
+LOGS_DIR = Path("./logs")
 
 # Ensure directories exist
 LOCAL_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+# --- Audit Logging System ---
+class AuditLogger:
+    def __init__(self):
+        self.logs_dir = LOGS_DIR
+        self.setup_loggers()
+        
+    def setup_loggers(self):
+        """Set up different loggers for different event types"""
+        # Daily audit log
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        
+        # Main audit logger
+        self.audit_logger = logging.getLogger('audit')
+        self.audit_logger.setLevel(logging.INFO)
+        audit_handler = logging.FileHandler(self.logs_dir / f"audit_{today}.log")
+        audit_formatter = logging.Formatter('%(message)s')
+        audit_handler.setFormatter(audit_formatter)
+        if not self.audit_logger.handlers:
+            self.audit_logger.addHandler(audit_handler)
+        
+        # Security events logger
+        self.security_logger = logging.getLogger('security')
+        self.security_logger.setLevel(logging.INFO)
+        security_handler = logging.FileHandler(self.logs_dir / "security_events.log")
+        security_formatter = logging.Formatter('%(message)s')
+        security_handler.setFormatter(security_formatter)
+        if not self.security_logger.handlers:
+            self.security_logger.addHandler(security_handler)
+        
+        # Bulk operations logger
+        self.bulk_logger = logging.getLogger('bulk_operations')
+        self.bulk_logger.setLevel(logging.INFO)
+        bulk_handler = logging.FileHandler(self.logs_dir / "bulk_operations.log")
+        bulk_formatter = logging.Formatter('%(message)s')
+        bulk_handler.setFormatter(bulk_formatter)
+        if not self.bulk_logger.handlers:
+            self.bulk_logger.addHandler(bulk_handler)
+        
+        # API calls logger
+        self.api_logger = logging.getLogger('api_calls')
+        self.api_logger.setLevel(logging.INFO)
+        api_handler = logging.FileHandler(self.logs_dir / "api_calls.log")
+        api_formatter = logging.Formatter('%(message)s')
+        api_handler.setFormatter(api_formatter)
+        if not self.api_logger.handlers:
+            self.api_logger.addHandler(api_handler)
+    
+    def get_client_ip(self):
+        """Get client IP address"""
+        try:
+            # Try to get IP from Streamlit context
+            if hasattr(st, 'context') and hasattr(st.context, 'headers'):
+                return st.context.headers.get('X-Forwarded-For', '127.0.0.1')
+            return '127.0.0.1'
+        except:
+            return '127.0.0.1'
+    
+    def get_session_id(self):
+        """Generate session ID"""
+        if 'session_id' not in st.session_state:
+            st.session_state.session_id = hashlib.md5(
+                f"{datetime.datetime.now().isoformat()}{self.get_client_ip()}".encode()
+            ).hexdigest()[:16]
+        return st.session_state.session_id
+    
+    def get_username(self):
+        """Get current username"""
+        if 'credentials' in st.session_state:
+            return st.session_state.credentials.get('user', 'unknown')
+        return 'anonymous'
+    
+    def log_auth_event(self, event_type, result, details=None):
+        """Log authentication events"""
+        log_entry = {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'event_type': 'AUTHENTICATION',
+            'action': event_type,
+            'username': self.get_username(),
+            'ip_address': self.get_client_ip(),
+            'session_id': self.get_session_id(),
+            'result': result,
+            'details': details or {},
+            'risk_level': 'HIGH' if result == 'FAILURE' else 'LOW'
+        }
+        
+        self.audit_logger.info(json.dumps(log_entry))
+        if result == 'FAILURE':
+            self.security_logger.info(json.dumps(log_entry))
+    
+    def log_site_access(self, site_name, action, result, details=None):
+        """Log site access events"""
+        log_entry = {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'event_type': 'SITE_ACCESS',
+            'username': self.get_username(),
+            'ip_address': self.get_client_ip(),
+            'session_id': self.get_session_id(),
+            'site_name': site_name,
+            'action': action,
+            'result': result,
+            'details': details or {},
+            'risk_level': 'MEDIUM' if 'UPDATE' in action else 'LOW'
+        }
+        
+        self.audit_logger.info(json.dumps(log_entry))
+        if result == 'FAILURE':
+            self.security_logger.info(json.dumps(log_entry))
+    
+    def log_bulk_operation(self, operation_type, site_count, results, details=None):
+        """Log bulk operations"""
+        log_entry = {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'event_type': 'BULK_OPERATION',
+            'username': self.get_username(),
+            'ip_address': self.get_client_ip(),
+            'session_id': self.get_session_id(),
+            'operation': operation_type,
+            'sites_affected': site_count,
+            'success_count': len(results.get('success', [])),
+            'failure_count': len(results.get('errors', [])),
+            'details': details or {},
+            'risk_level': 'HIGH'
+        }
+        
+        self.audit_logger.info(json.dumps(log_entry))
+        self.bulk_logger.info(json.dumps(log_entry))
+        
+        # Log security event if significant failures
+        if len(results.get('errors', [])) > site_count * 0.5:
+            self.security_logger.info(json.dumps({**log_entry, 'alert': 'HIGH_FAILURE_RATE'}))
+    
+    def log_api_call(self, endpoint, action, result, response_time=None, details=None):
+        """Log API calls"""
+        log_entry = {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'event_type': 'API_CALL',
+            'username': self.get_username(),
+            'ip_address': self.get_client_ip(),
+            'session_id': self.get_session_id(),
+            'endpoint': endpoint,
+            'action': action,
+            'result': result,
+            'response_time': response_time,
+            'details': details or {},
+            'risk_level': 'MEDIUM' if result == 'FAILURE' else 'LOW'
+        }
+        
+        self.api_logger.info(json.dumps(log_entry))
+        if result == 'FAILURE':
+            self.security_logger.info(json.dumps(log_entry))
+    
+    def log_file_operation(self, operation_type, file_path, result, details=None):
+        """Log file operations"""
+        log_entry = {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'event_type': 'FILE_OPERATION',
+            'username': self.get_username(),
+            'ip_address': self.get_client_ip(),
+            'session_id': self.get_session_id(),
+            'operation': operation_type,
+            'file_path': str(file_path),
+            'result': result,
+            'details': details or {},
+            'risk_level': 'LOW'
+        }
+        
+        self.audit_logger.info(json.dumps(log_entry))
+    
+    def log_export_operation(self, export_type, record_count, result, details=None):
+        """Log export operations"""
+        log_entry = {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'event_type': 'EXPORT_OPERATION',
+            'username': self.get_username(),
+            'ip_address': self.get_client_ip(),
+            'session_id': self.get_session_id(),
+            'export_type': export_type,
+            'record_count': record_count,
+            'result': result,
+            'details': details or {},
+            'risk_level': 'MEDIUM'
+        }
+        
+        self.audit_logger.info(json.dumps(log_entry))
+
+# Global audit logger instance
+audit_logger = AuditLogger()
 
 # --- Softaculous API Functions ---
 def make_softaculous_request(act, post_data=None, additional_params=None):
     """Make authenticated request to Softaculous API"""
+    start_time = datetime.datetime.now()
+    
     # Get credentials from session state
     if 'credentials' not in st.session_state:
+        audit_logger.log_api_call('softaculous', act, 'FAILURE', 
+                                details={'error': 'No credentials available'})
         return None, "Not authenticated"
     
     creds = st.session_state.credentials
@@ -48,15 +246,28 @@ def make_softaculous_request(act, post_data=None, additional_params=None):
             response = requests.get(base_url, params=params, 
                                   verify=False, timeout=30)
         
+        response_time = (datetime.datetime.now() - start_time).total_seconds()
+        
         if response.status_code == 200:
             # Parse serialized PHP response
             import phpserialize
             result = phpserialize.loads(response.content)
+            
+            audit_logger.log_api_call('softaculous', act, 'SUCCESS', 
+                                    response_time=response_time,
+                                    details={'params': params, 'response_size': len(response.content)})
             return result, None
         else:
+            audit_logger.log_api_call('softaculous', act, 'FAILURE', 
+                                    response_time=response_time,
+                                    details={'status_code': response.status_code, 'error': response.text})
             return None, f"HTTP {response.status_code}: {response.text}"
     
     except Exception as e:
+        response_time = (datetime.datetime.now() - start_time).total_seconds()
+        audit_logger.log_api_call('softaculous', act, 'FAILURE', 
+                                response_time=response_time,
+                                details={'error': str(e)})
         return None, str(e)
 
 def list_wordpress_installations():
@@ -89,6 +300,8 @@ def get_plugins_for_installation(insid):
     
     result, error = make_softaculous_request('wordpress', post_data)
     if error:
+        audit_logger.log_site_access(f"Site_{insid}", 'PLUGIN_LIST', 'FAILURE', 
+                                   details={'error': error})
         return None, error
     
     plugins = []
@@ -104,6 +317,8 @@ def get_plugins_for_installation(insid):
                 'description': plugin_data.get('Description', '')
             })
     
+    audit_logger.log_site_access(f"Site_{insid}", 'PLUGIN_LIST', 'SUCCESS', 
+                               details={'plugin_count': len(plugins)})
     return plugins, None
 
 def update_plugin(insid, plugin_slug=None):
@@ -114,15 +329,22 @@ def update_plugin(insid, plugin_slug=None):
     }
     
     if plugin_slug:
-        # For individual plugin update, we need to use WordPress Manager
-        # This would require implementing the specific plugin update endpoint
         post_data['slug'] = plugin_slug
         post_data['update'] = '1'
+        action = f'PLUGIN_UPDATE_{plugin_slug}'
     else:
-        # For bulk updates, we can use the bulk update feature
         post_data['bulk_update'] = '1'
+        action = 'PLUGIN_BULK_UPDATE'
     
     result, error = make_softaculous_request('wordpress', post_data)
+    
+    if error:
+        audit_logger.log_site_access(f"Site_{insid}", action, 'FAILURE', 
+                                   details={'error': error})
+    else:
+        audit_logger.log_site_access(f"Site_{insid}", action, 'SUCCESS', 
+                                   details={'plugin_slug': plugin_slug})
+    
     return result, error
 
 def activate_plugin(insid, plugin_slug):
@@ -135,6 +357,13 @@ def activate_plugin(insid, plugin_slug):
     }
     
     result, error = make_softaculous_request('wordpress', post_data)
+    
+    if error:
+        audit_logger.log_site_access(f"Site_{insid}", f'PLUGIN_ACTIVATE_{plugin_slug}', 'FAILURE', 
+                                   details={'error': error})
+    else:
+        audit_logger.log_site_access(f"Site_{insid}", f'PLUGIN_ACTIVATE_{plugin_slug}', 'SUCCESS')
+    
     return result, error
 
 def deactivate_plugin(insid, plugin_slug):
@@ -147,6 +376,13 @@ def deactivate_plugin(insid, plugin_slug):
     }
     
     result, error = make_softaculous_request('wordpress', post_data)
+    
+    if error:
+        audit_logger.log_site_access(f"Site_{insid}", f'PLUGIN_DEACTIVATE_{plugin_slug}', 'FAILURE', 
+                                   details={'error': error})
+    else:
+        audit_logger.log_site_access(f"Site_{insid}", f'PLUGIN_DEACTIVATE_{plugin_slug}', 'SUCCESS')
+    
     return result, error
 
 def install_plugin(insid, plugin_slug):
@@ -171,6 +407,13 @@ def create_backup(insid):
     }
     
     result, error = make_softaculous_request('backup', post_data, {'insid': insid})
+    
+    if error:
+        audit_logger.log_site_access(f"Site_{insid}", 'BACKUP_CREATE', 'FAILURE', 
+                                   details={'error': error})
+    else:
+        audit_logger.log_site_access(f"Site_{insid}", 'BACKUP_CREATE', 'SUCCESS')
+    
     return result, error
 
 def list_backups():
@@ -204,6 +447,8 @@ def download_backup_file(backup_filename):
         result, error = make_softaculous_request('backups', additional_params=params)
         
         if error:
+            audit_logger.log_file_operation('BACKUP_DOWNLOAD', backup_filename, 'FAILURE', 
+                                          details={'error': error})
             return None, error
         
         # Save to local backup directory
@@ -213,11 +458,18 @@ def download_backup_file(backup_filename):
         if result and isinstance(result, bytes):
             with open(local_file_path, 'wb') as f:
                 f.write(result)
+            
+            audit_logger.log_file_operation('BACKUP_DOWNLOAD', local_file_path, 'SUCCESS', 
+                                          details={'file_size': len(result)})
             return local_file_path, None
         else:
+            audit_logger.log_file_operation('BACKUP_DOWNLOAD', backup_filename, 'FAILURE', 
+                                          details={'error': 'No backup data received'})
             return None, "No backup data received"
             
     except Exception as e:
+        audit_logger.log_file_operation('BACKUP_DOWNLOAD', backup_filename, 'FAILURE', 
+                                      details={'error': str(e)})
         return None, str(e)
 
 def get_backup_file_info(backup_filename):
@@ -336,8 +588,20 @@ def test_cpanel_connection(host, port, user, password):
         params = {'act': 'home', 'api': 'json'}
         
         response = requests.get(base_url, params=params, verify=False, timeout=10)
-        return response.status_code == 200
-    except:
+        
+        if response.status_code == 200:
+            audit_logger.log_auth_event('LOGIN_TEST', 'SUCCESS', 
+                                      details={'host': host, 'port': port, 'user': user})
+            return True
+        else:
+            audit_logger.log_auth_event('LOGIN_TEST', 'FAILURE', 
+                                      details={'host': host, 'port': port, 'user': user, 
+                                             'status_code': response.status_code})
+            return False
+    except Exception as e:
+        audit_logger.log_auth_event('LOGIN_TEST', 'FAILURE', 
+                                  details={'host': host, 'port': port, 'user': user, 
+                                         'error': str(e)})
         return False
 
 def show_login_screen():
@@ -374,9 +638,16 @@ def show_login_screen():
                         'pass': password
                     }
                     
+                    # Log successful login
+                    audit_logger.log_auth_event('LOGIN', 'SUCCESS', 
+                                              details={'host': host, 'port': port})
+                    
                     st.success("✅ Connected successfully! Redirecting to audit tools...")
                     st.rerun()
                 else:
+                    # Log failed login
+                    audit_logger.log_auth_event('LOGIN', 'FAILURE', 
+                                              details={'host': host, 'port': port, 'user': user})
                     st.error("❌ Failed to connect to cPanel. Please check your credentials.")
 
 def show_main_app():
@@ -388,6 +659,9 @@ def show_main_app():
         st.write(f"**User:** {st.session_state.credentials['user']}")
         
         if st.button("🚪 Logout"):
+            # Log logout event
+            audit_logger.log_auth_event('LOGOUT', 'SUCCESS')
+            
             for key in ['credentials', 'sftp_credentials', 'installations', 'selected_installation', 'plugins']:
                 if key in st.session_state:
                     del st.session_state[key]
@@ -613,10 +887,14 @@ else:
         with st.spinner("Loading WordPress installations..."):
             installations, error = list_wordpress_installations()
             if error:
+                audit_logger.log_auth_event('SITE_DISCOVERY', 'FAILURE', 
+                                          details={'error': error})
                 st.error(f"Failed to load installations: {error}")
                 st.stop()
             else:
                 st.session_state.installations = installations
+                audit_logger.log_auth_event('SITE_DISCOVERY', 'SUCCESS', 
+                                          details={'site_count': len(installations)})
 
     # Domain selection
     st.header("🌐 Select WordPress Installations")
@@ -631,35 +909,38 @@ else:
         with col1:
             # CSV Export
             csv_data = export_sites_to_csv(st.session_state.installations)
-            st.download_button(
+            if st.download_button(
                 label="📊 Export CSV",
                 data=csv_data,
                 file_name=f"wordpress_sites_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
                 help="Download site list as CSV file"
-            )
+            ):
+                audit_logger.log_export_operation('CSV', len(st.session_state.installations), 'SUCCESS')
         
         with col2:
             # JSON Export
             json_data = export_sites_to_json(st.session_state.installations)
-            st.download_button(
+            if st.download_button(
                 label="📋 Export JSON",
                 data=json_data,
                 file_name=f"wordpress_sites_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                 mime="application/json",
                 help="Download site list as JSON file"
-            )
+            ):
+                audit_logger.log_export_operation('JSON', len(st.session_state.installations), 'SUCCESS')
         
         with col3:
             # Markdown Report
             report_data = create_detailed_site_report(st.session_state.installations)
-            st.download_button(
+            if st.download_button(
                 label="📝 Export Report",
                 data=report_data,
                 file_name=f"wordpress_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                 mime="text/markdown",
                 help="Download detailed markdown report"
-            )
+            ):
+                audit_logger.log_export_operation('MARKDOWN', len(st.session_state.installations), 'SUCCESS')
         
         with col4:
             # Display count
@@ -1199,22 +1480,118 @@ else:
             with col2:
                 try:
                     with open(archive, 'rb') as f:
-                        st.download_button(
+                        if st.download_button(
                             label="⬇️ Download",
                             data=f.read(),
                             file_name=archive.name,
                             mime="application/octet-stream",
                             key=f"download_archive_{archive.name}"
-                        )
+                        ):
+                            audit_logger.log_file_operation('ARCHIVE_DOWNLOAD', archive.name, 'SUCCESS')
                 except Exception as e:
                     st.error(f"Error reading archive: {e}")
+                    audit_logger.log_file_operation('ARCHIVE_DOWNLOAD', archive.name, 'FAILURE', 
+                                                  details={'error': str(e)})
+
+    # Audit Log Viewer Section
+    st.markdown("---")
+    st.header("📋 Audit Log Viewer")
+    st.markdown("View recent audit logs and system activity for security monitoring.")
+    
+    log_type = st.selectbox(
+        "Select log type:",
+        ["Main Audit", "Security Events", "Bulk Operations", "API Calls"]
+    )
+    
+    # Map selection to log file
+    log_files = {
+        "Main Audit": f"audit_{datetime.datetime.now().strftime('%Y-%m-%d')}.log",
+        "Security Events": "security_events.log",
+        "Bulk Operations": "bulk_operations.log",
+        "API Calls": "api_calls.log"
+    }
+    
+    selected_log_file = LOGS_DIR / log_files[log_type]
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📖 View Recent Logs"):
+            try:
+                if selected_log_file.exists():
+                    with open(selected_log_file, 'r') as f:
+                        log_lines = f.readlines()
+                    
+                    # Show last 50 lines
+                    recent_logs = log_lines[-50:] if len(log_lines) > 50 else log_lines
+                    
+                    st.subheader(f"📋 Recent {log_type} Entries")
+                    for line in recent_logs:
+                        try:
+                            log_entry = json.loads(line.strip())
+                            with st.expander(f"{log_entry.get('timestamp', 'Unknown Time')} - {log_entry.get('event_type', 'Unknown')}"):
+                                st.json(log_entry)
+                        except json.JSONDecodeError:
+                            st.text(line.strip())
+                else:
+                    st.info(f"No {log_type.lower()} log file found yet.")
+            except Exception as e:
+                st.error(f"Error reading log file: {e}")
+    
+    with col2:
+        if st.button("📥 Download Log File"):
+            try:
+                if selected_log_file.exists():
+                    with open(selected_log_file, 'r') as f:
+                        log_content = f.read()
+                    
+                    st.download_button(
+                        label=f"⬇️ Download {log_type} Log",
+                        data=log_content,
+                        file_name=selected_log_file.name,
+                        mime="text/plain"
+                    )
+                    
+                    audit_logger.log_file_operation('LOG_DOWNLOAD', selected_log_file.name, 'SUCCESS')
+                else:
+                    st.warning(f"No {log_type.lower()} log file found yet.")
+            except Exception as e:
+                st.error(f"Error downloading log file: {e}")
+                audit_logger.log_file_operation('LOG_DOWNLOAD', selected_log_file.name, 'FAILURE', 
+                                              details={'error': str(e)})
+
+    # Log Statistics
+    st.subheader("📊 Log Statistics")
+    try:
+        log_stats = {}
+        for log_name, log_file in log_files.items():
+            log_path = LOGS_DIR / log_file
+            if log_path.exists():
+                with open(log_path, 'r') as f:
+                    line_count = sum(1 for line in f)
+                log_stats[log_name] = line_count
+            else:
+                log_stats[log_name] = 0
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Main Audit Entries", log_stats.get("Main Audit", 0))
+        with col2:
+            st.metric("Security Events", log_stats.get("Security Events", 0))
+        with col3:
+            st.metric("Bulk Operations", log_stats.get("Bulk Operations", 0))
+        with col4:
+            st.metric("API Calls", log_stats.get("API Calls", 0))
+    
+    except Exception as e:
+        st.error(f"Error calculating log statistics: {e}")
 
     st.markdown("---")
     st.caption("Developed for CLAS IT AI in July Workshop – 2025")
-    st.caption("✨ **Enhanced with Advanced Download Options**")
-    st.caption("📥 **Individual, Multiple, Bulk & Compressed Downloads**")
+    st.caption("✨ **Enhanced with Comprehensive Audit Logging**")
+    st.caption("🔐 **Security & Compliance Ready**")
+    st.caption("📋 **Complete Activity Tracking & Monitoring**")
     st.caption("🔗 Uses Softaculous WordPress Manager API for all operations")
-    st.caption("🔐 Credentials stored securely in session state")
+    st.caption("💾 **Audit logs stored in ./logs/ directory**")
 
 
 def run_bulk_audit(domains, audit_options):
@@ -1227,6 +1604,11 @@ def run_bulk_audit(domains, audit_options):
         'success': [],
         'errors': []
     }
+    
+    # Log start of bulk operation
+    audit_logger.log_bulk_operation('BULK_AUDIT_START', total_sites, 
+                                   {'success': [], 'errors': []}, 
+                                   details={'audit_options': audit_options})
     
     for i, domain in enumerate(domains):
         status_text.text(f"Processing {domain['display_name']} ({i+1}/{total_sites})")
@@ -1266,6 +1648,10 @@ def run_bulk_audit(domains, audit_options):
         
         progress_bar.progress((i + 1) / total_sites)
     
+    # Log completion of bulk operation
+    audit_logger.log_bulk_operation('BULK_AUDIT_COMPLETE', total_sites, results, 
+                                   details={'audit_options': audit_options})
+    
     # Show final results
     status_text.text("Bulk audit complete!")
     
@@ -1289,6 +1675,10 @@ def run_bulk_plugin_update(domains):
     
     success_count = 0
     error_count = 0
+    results = {'success': [], 'errors': []}
+    
+    # Log start of bulk operation
+    audit_logger.log_bulk_operation('BULK_PLUGIN_UPDATE_START', total_sites, results)
     
     for i, domain in enumerate(domains):
         status_text.text(f"Updating plugins for {domain['display_name']} ({i+1}/{total_sites})")
@@ -1297,11 +1687,16 @@ def run_bulk_plugin_update(domains):
         if error:
             st.error(f"❌ Plugin update failed for {domain['display_name']}: {error}")
             error_count += 1
+            results['errors'].append(f"{domain['display_name']}: {error}")
         else:
             st.success(f"✅ Plugins updated for {domain['display_name']}")
             success_count += 1
+            results['success'].append(domain['display_name'])
         
         progress_bar.progress((i + 1) / total_sites)
+    
+    # Log completion of bulk operation
+    audit_logger.log_bulk_operation('BULK_PLUGIN_UPDATE_COMPLETE', total_sites, results)
     
     status_text.text("Plugin updates complete!")
     st.success(f"🎉 Plugin updates completed! ✅ {success_count} successful, ❌ {error_count} failed")
